@@ -1,11 +1,12 @@
 import React from 'react'
-import Emoji from './Day4/Emoji'
+
+import FocusInput from './Day5/Focusinput'
 
 
 export default function App() {
   return (
     <div>
-     <Emoji/>
+     <FocusInput/>
     </div>
   )
 }
