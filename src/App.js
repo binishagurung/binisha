@@ -1,13 +1,11 @@
 import React from 'react'
 
-
-import Todo from './Day8/Todo'
-
+import Path from './Path'
 
 export default function App() {
   return (
     <div>
-     <Todo/>
+     <Path/>
     </div>
   )
 }

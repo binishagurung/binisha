@@ -1,26 +1,21 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function Todo() {
-  const [todos, setTodos] = useState([]);      // To store todo list
-  const [loading, setLoading] = useState(true); // Loading state
-  const [error, setError] = useState(null);     // Error message
-  const [newTask, setNewTask] = useState("");   // New input value
+function Todo() {
+  const [todos, setTodos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [newTodo, setNewTodo] = useState("");
 
-  // Fetch initial todo list from API
+  // Fetch todos on mount
   useEffect(() => {
     const fetchTodos = async () => {
       try {
-        const response = await axios.post("https://dummyjson.com/todos/add",{        
-            todo: newTask,
-        completed: false,
-        userId: 1,// dummy error
-        });
-
-        setTodos([response.data,...todos]);
-        setNewTask("");
+        const res = await axios.get("https://dummyjson.com/todos");
+        setTodos(res.data.todos);
       } catch (err) {
-        setError("Error fetching todos");
+        console.error("Error fetching todos:", err);
+        setError("Failed to fetch todos.");
       } finally {
         setLoading(false);
       }
@@ -29,96 +24,153 @@ export default function Todo() {
     fetchTodos();
   }, []);
 
-  // Add new todo by calling POST API
-  const handleAddTodo = async () => {
-    if (newTask.trim() === "") return;
+  // Delete todo from local state
+  const handleDelete = (id) => {
+    setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== id));
+  };
+
+  // Add a new todo
+  const handleAdd = async () => {
+    const trimmed = newTodo.trim();
+    if (!trimmed) return;
 
     try {
-      const response = await axios.post("https://dummyjson.com/todos/add", {
-        todo: newTask,
+      const res = await axios.post("https://dummyjson.com/todos/add", {
+        todo: trimmed,
         completed: false,
-        userId: 1 // Required field for dummyjson API
+        userId: 1,
       });
 
-      // Add the response todo to the top of the list
-      setTodos((prevTodos) => [response.data, ...prevTodos]);
-      setNewTask(""); // Clear input
-    } catch (err) {
-      alert("Failed to add task");
+      setTodos((prev) => [res.data, ...prev]);
+      setNewTodo("");
+    } 
+    catch (err) {
       console.error("Error adding todo:", err);
+      alert("Failed to add todo.");
     }
   };
 
-  // Handle delete confirmation
+  // Toggle checkbox and update completed status
+  const handleToggle = (id) => {
+    setTodos((prevTodos) => {
+      const newTodos = prevTodos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      );
 
+      const updated = newTodos.find((t) => t.id === id);
 
-const handleDelete = async (todo) => {
-  const message = ` Task: ${todo.todo}\nStatus: ${todo.completed ? "Completed" : "Pending"}\nID: ${todo.id}`;
-  const confirmDelete = window.confirm(`${message}\n\n❗ Do you want to delete this task?`);
+      axios
+        .put(`https://dummyjson.com/todos/${id}`, {
+          completed: updated.completed,
+        })
+        .catch((err) => {
+          console.error("Failed to update completion status:", err);
+        });
 
-  if (!confirmDelete) return;
+      return newTodos;
+    });
+  };
 
-  try {
-    // Assuming your API DELETE endpoint looks like this:
-    await axios.delete(`/api/todos/${todo.id}`);
+  // Inline styles
+  const styles = {
+    container: {
+      padding: "20px",
+      fontFamily: "Arial, sans-serif",
+      maxWidth: "600px",
+      margin: "0 auto",
+    },
+    todoBox: {
+      border: "2px solid #ccc",
+      borderRadius: "8px",
+      padding: "15px",
+      marginBottom: "10px",
+      backgroundColor: "#f9f9f9",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    completed: {
+      textDecoration: "line-through",
+      color: "gray",
+    },
+    deleteButton: {
+      backgroundColor: "crimson",
+      color: "white",
+      border: "none",
+      padding: "5px 10px",
+      borderRadius: "4px",
+      cursor: "pointer",
+    },
+    addSection: {
+      display: "flex",
+      gap: "10px",
+      marginBottom: "20px",
+    },
+    input: {
+      flex: 1,
+      padding: "8px",
+      fontSize: "16px",
+    },
+    addButton: {
+      backgroundColor: "green",
+      color: "white",
+      border: "none",
+      padding: "8px 16px",
+      borderRadius: "4px",
+      cursor: "pointer",
+    },
+  };
 
-    // Update local state only if API call succeeds
-    setTodos((prevTodos) => prevTodos.filter((t) => t.id !== todo.id));
-
-    alert("Task deleted successfully!");
-  } catch (error) {
-    console.error("Failed to delete task:", error);
-    alert("Error deleting the task. Please try again later.");
-  }
-};
-
-
-  // Show loading or error
-  if (loading) return <p>Loading todos...</p>;
+  // Loading or error state
+  if (loading) return <p>Loading...</p>;
   if (error) return <p>{error}</p>;
 
   return (
-    <div className="todo-container">
-      <h2>To Do List</h2>
+    <div style={styles.container}>
+      <h1>Todo List</h1>
 
-      {/* Input + Add Task */}
-      <div className="add-todo">
+      <div style={styles.addSection}>
         <input
           type="text"
-          value={newTask}
-          onChange={(e) => setNewTask(e.target.value)} // Update state with input
-          placeholder="Enter new task"
+          placeholder="Add a new todo..."
+          value={newTodo}
+          onChange={(e) => setNewTodo(e.target.value)}
+          style={styles.input}
         />
-        <button onClick={handleAddTodo}>Add Task</button>
+        <button style={styles.addButton} onClick={handleAdd}>
+          Add
+        </button>
       </div>
 
-      {/* Display Tasks */}
-      <table className="todo-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Task</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {todos.map((todo) => (
-            <tr key={todo.id}>
-              <td>{todo.id}</td>
-              <td>{todo.todo}</td>
-              <td className={todo.completed ? "todo-completed" : "todo-pending"}>
-                {todo.completed ? "✅ Completed" : "❌ Pending"}
-              </td>
-              <td>
-                <button className="detail-button" onClick={() => handleDelete(todo)}>
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+      {todos.map((todo) => (
+        <div style={styles.todoBox} key={todo.id}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              flex: 1,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={todo.completed}
+              onChange={() => handleToggle(todo.id)}
+            />
+            <span style={todo.completed ? styles.completed : {}}>
+              {todo.todo}
+            </span>
+          </label>
+          <button
+            style={styles.deleteButton}
+            onClick={() => handleDelete(todo.id)}
+          >
+            Delete
+          </button>
+        </div>
+      ))}
+    </div>
+  );
 }
+
+export default Todo;
